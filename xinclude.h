@@ -13,8 +13,8 @@
  *  Lesser General Public License for more details.
  *
  *  You should have received a copy of the GNU Lesser General Public
- *  License along with this library; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *  License along with this library; if not, see
+ *  <http://www.gnu.org/licenses/>.
  *
  *  Davide Libenzi <davidel@xmailserver.org>
  *
@@ -26,9 +26,13 @@
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <string.h>
 #include <limits.h>
+
+#ifdef _WIN32
+#else
+#include <unistd.h>
+#endif
 
 #include "xmacros.h"
 #include "xdiff.h"
@@ -38,5 +42,42 @@
 #include "xdiffi.h"
 #include "xemit.h"
 
+#define giterr_set_oom() 0
+
+/**
+ * Check a pointer allocation result, returning -1 if it failed.
+ */
+#define GITERR_CHECK_ALLOC(ptr) if (ptr == NULL) { return -1; }
+
+/** Check for additive overflow, setting an error if would occur. */
+#define GIT_ADD_SIZET_OVERFLOW(out, one, two) \
+        (git__add_sizet_overflow(out, one, two) ? (giterr_set_oom(), 1) : 0)
+
+/** Check for additive overflow, setting an error if would occur. */
+#define GIT_MULTIPLY_SIZET_OVERFLOW(out, nelem, elsize) \
+        (git__multiply_sizet_overflow(out, nelem, elsize) ? (giterr_set_oom(), 1) : 0)
+
+/** Check for additive overflow, failing if it would occur. */
+#define GITERR_CHECK_ALLOC_ADD(out, one, two) \
+        if (GIT_ADD_SIZET_OVERFLOW(out, one, two)) { return -1; }
+
+#define GITERR_CHECK_ALLOC_ADD3(out, one, two, three) \
+        if (GIT_ADD_SIZET_OVERFLOW(out, one, two) || \
+                GIT_ADD_SIZET_OVERFLOW(out, *(out), three)) { return -1; }
+
+#define GITERR_CHECK_ALLOC_ADD4(out, one, two, three, four) \
+        if (GIT_ADD_SIZET_OVERFLOW(out, one, two) || \
+                GIT_ADD_SIZET_OVERFLOW(out, *(out), three) || \
+                GIT_ADD_SIZET_OVERFLOW(out, *(out), four)) { return -1; }
+
+#define GITERR_CHECK_ALLOC_ADD5(out, one, two, three, four, five) \
+        if (GIT_ADD_SIZET_OVERFLOW(out, one, two) || \
+                GIT_ADD_SIZET_OVERFLOW(out, *(out), three) || \
+                GIT_ADD_SIZET_OVERFLOW(out, *(out), four) || \
+                GIT_ADD_SIZET_OVERFLOW(out, *(out), five)) { return -1; }
+
+/** Check for multiplicative overflow, failing if it would occur. */
+#define GITERR_CHECK_ALLOC_MULTIPLY(out, nelem, elsize) \
+        if (GIT_MULTIPLY_SIZET_OVERFLOW(out, nelem, elsize)) { return -1; }
 
 #endif /* #if !defined(XINCLUDE_H) */
